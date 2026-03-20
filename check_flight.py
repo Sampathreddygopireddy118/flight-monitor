@@ -18,11 +18,14 @@ def fmt(iso_str, tz):
     if not iso_str or iso_str in ("N/A", "Not departed yet", "Not arrived yet"):
         return "—"
     try:
-        dt = datetime.fromisoformat(iso_str).astimezone(tz)
+        # Parse with original timezone info, then convert
+        dt = datetime.fromisoformat(iso_str)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.astimezone(tz)
         return dt.strftime("%b %d, %Y  %I:%M %p")
-    except:
+    except Exception as e:
         return iso_str
-
 def delay_str(minutes):
     if not minutes or minutes == 0:
         return "On Time ✅"
