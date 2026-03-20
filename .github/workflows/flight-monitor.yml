@@ -1,6 +1,7 @@
 name: AA293 Flight Monitor
 
 on:
+  workflow_dispatch:
   schedule:
     # 1. 10:00 PM IST = 16:30 UTC  → Pre-departure check
     - cron: '30 16 * * *'
@@ -10,7 +11,6 @@ on:
     - cron: '0 11 * * *'
     # 4. 7:10 AM EST = 12:10 UTC → Arrival check
     - cron: '10 12 * * *'
-
 jobs:
   check-flight:
     runs-on: ubuntu-latest
