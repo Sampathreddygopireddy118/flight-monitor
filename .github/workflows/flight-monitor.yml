@@ -3,17 +3,15 @@ name: AA293 Flight Monitor
 on:
   workflow_dispatch:
   schedule:
-    # 1. 10:00 PM IST = 16:30 UTC  → Pre-departure check
-    - cron: '30 16 * * *'
-    # 2. 1:00 AM IST next day = 19:30 UTC → Post-departure check
-    - cron: '30 19 * * *'
-    # 3. 6:00 AM EST = 11:00 UTC → Mid-flight check
-    - cron: '0 11 * * *'
-    # 4. 7:10 AM EST = 12:10 UTC → Arrival check
-    - cron: '10 12 * * *'
+    - cron: '30 16 * * *'   # 10:00 PM IST  — Pre-departure
+    - cron: '30 19 * * *'   #  1:00 AM IST  — Post-departure
+    - cron: '0 11  * * *'   #  6:00 AM EST  — In-flight
+    - cron: '10 12 * * *'   #  7:10 AM EST  — Arrival
+
 jobs:
   check-flight:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,20 +27,15 @@ jobs:
         id: label
         run: |
           HOUR=$(date -u +"%H")
-          MIN=$(date -u +"%M")
-          if [ "$HOUR" = "16" ]; then
-            echo "label=10 PM IST Pre-Departure Check" >> $GITHUB_OUTPUT
-          elif [ "$HOUR" = "19" ]; then
-            echo "label=Post-Departure Check (1 AM IST)" >> $GITHUB_OUTPUT
-          elif [ "$HOUR" = "11" ]; then
-            echo "label=6 AM EST In-Flight Check" >> $GITHUB_OUTPUT
-          else
-            echo "label=7:10 AM EST Arrival Check" >> $GITHUB_OUTPUT
+          if   [ "$HOUR" = "16" ]; then echo "label=🕐 10 PM IST — Pre-Departure"    >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "19" ]; then echo "label=🛫 Post-Departure Check"          >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "11" ]; then echo "label=✈️  6 AM EST — In-Flight Status"  >> $GITHUB_OUTPUT
+          else                          echo "label=🛬 7:10 AM EST — Arrival Check"   >> $GITHUB_OUTPUT
           fi
 
       - name: Check flight & send email
         env:
           AVIATIONSTACK_KEY: ${{ secrets.AVIATIONSTACK_KEY }}
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+          GMAIL_USER:        ${{ secrets.GMAIL_USER }}
+          GMAIL_PASS:        ${{ secrets.GMAIL_PASS }}
         run: python check_flight.py "${{ steps.label.outputs.label }}"
