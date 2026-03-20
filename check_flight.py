@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 
 # ── Timezones ──────────────────────────────────────────
 IST = timezone(timedelta(hours=5, minutes=30))
-EST = timezone(timedelta(hours=-5))
+EDT = timezone(timedelta(hours=-4))
 
 # ── Config ─────────────────────────────────────────────
 FLIGHT      = "AA293"
@@ -16,14 +16,12 @@ CHECK_LABEL = sys.argv[1] if len(sys.argv) > 1 else "Status Check"
 # ── Helpers ────────────────────────────────────────────
 def fmt(iso_str, tz=None):
     """
-    AviationStack returns times as local time but labeled +00:00 (UTC).
-    Example: 23:55+00:00 is actually 23:55 IST local, NOT 23:55 UTC.
-    So we strip the timezone info and apply the correct local timezone label.
+    AviationStack returns local times labeled as UTC.
+    We strip timezone and display as-is with correct label.
     """
     if not iso_str or iso_str in ("N/A", "Not departed yet", "Not arrived yet", "None", None):
         return "—"
     try:
-        # Strip timezone info — treat the time value as already local
         dt = datetime.fromisoformat(iso_str).replace(tzinfo=None)
         return dt.strftime("%b %d, %Y  %I:%M %p")
     except:
@@ -65,9 +63,8 @@ def get_status():
     dep = f["departure"]
     arr = f["arrival"]
 
-    # Checked at shown in both IST and EST
     now_ist = datetime.now(IST).strftime("%b %d, %Y  %I:%M %p")
-    now_est = datetime.now(EST).strftime("%b %d, %Y  %I:%M %p")
+    now_edt = datetime.now(EDT).strftime("%b %d, %Y  %I:%M %p")
 
     body = f"""
 ✈️  AA293  |  New Delhi  →  New York JFK
@@ -88,16 +85,16 @@ def get_status():
 
 🛬  ARRIVAL  —  John F. Kennedy Intl (JFK)
 ─────────────────────────────────────────
-  Scheduled :  {fmt(arr.get("scheduled"))}  EST
-  Estimated :  {fmt(arr.get("estimated"))}  EST
-  Actual    :  {fmt(arr.get("actual"))}     EST
+  Scheduled :  {fmt(arr.get("scheduled"))}  EDT
+  Estimated :  {fmt(arr.get("estimated"))}  EDT
+  Actual    :  {fmt(arr.get("actual"))}     EDT
   Delay     :  {delay_str(arr.get("delay", 0))}
   Terminal  :  {arr.get("terminal", "8")}   Gate: {arr.get("gate", "—")}
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Checked at:  {now_ist} IST
-               {now_est} EST
+  Checked at:  {now_ist}  IST
+               {now_edt}  EDT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
     return raw_status, body

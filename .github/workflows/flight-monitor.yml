@@ -5,8 +5,8 @@ on:
   schedule:
     - cron: '30 16 * * *'   # 10:00 PM IST (16:30 UTC) — Pre-departure check
     - cron: '30 18 * * *'   # 12:00 AM IST (18:30 UTC) — Post-departure check
-    - cron: '0 11  * * *'   #  6:00 AM EST (11:00 UTC) — In-flight check
-    - cron: '0 12  * * *'   #  7:00 AM EST (12:00 UTC) — Arrival check
+    - cron: '0 10  * * *'   #  6:00 AM EDT (10:00 UTC) — In-flight check
+    - cron: '0 11  * * *'   #  7:00 AM EDT (11:00 UTC) — Arrival check
 
 jobs:
   check-flight:
@@ -29,8 +29,8 @@ jobs:
           HOUR=$(date -u +"%H")
           if   [ "$HOUR" = "16" ]; then echo "label=🌙 10 PM IST — Pre-Departure Check"  >> $GITHUB_OUTPUT
           elif [ "$HOUR" = "18" ]; then echo "label=🛫 12 AM IST — Post-Departure Check" >> $GITHUB_OUTPUT
-          elif [ "$HOUR" = "11" ]; then echo "label=✈️  6 AM EST — In-Flight Check"      >> $GITHUB_OUTPUT
-          else                          echo "label=🛬 7 AM EST — Arrival Check"         >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "10" ]; then echo "label=✈️  6 AM EDT — In-Flight Check"      >> $GITHUB_OUTPUT
+          else                          echo "label=🛬 7 AM EDT — Arrival Check"         >> $GITHUB_OUTPUT
           fi
 
       - name: Check flight & send email
