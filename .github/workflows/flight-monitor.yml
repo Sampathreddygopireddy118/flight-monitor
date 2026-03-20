@@ -35,7 +35,7 @@ jobs:
 
       - name: Check flight & send email
         env:
-          GMAIL_USER:  ${{ secrets.GMAIL_USER }}
-          GMAIL_PASS:  ${{ secrets.GMAIL_PASS }}
-          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          AVIATIONSTACK_KEY: ${{ secrets.AVIATIONSTACK_KEY }}
+          GMAIL_USER:        ${{ secrets.GMAIL_USER }}
+          GMAIL_PASS:        ${{ secrets.GMAIL_PASS }}
         run: python check_flight.py "${{ steps.label.outputs.label }}"

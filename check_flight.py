@@ -1,5 +1,4 @@
-import smtplib, os, sys
-import requests
+import requests, smtplib, os, sys
 from email.mime.text import MIMEText
 from datetime import datetime, timezone, timedelta
 
@@ -8,74 +7,112 @@ IST = timezone(timedelta(hours=5, minutes=30))
 EDT = timezone(timedelta(hours=-4))
 
 # ── Config ─────────────────────────────────────────────
+FLIGHT      = "AA293"
+API_KEY     = os.environ["AVIATIONSTACK_KEY"]
 GMAIL_USER  = os.environ["GMAIL_USER"]
 GMAIL_PASS  = os.environ["GMAIL_PASS"]
-SERPAPI_KEY = os.environ["SERPAPI_KEY"]
 CHECK_LABEL = sys.argv[1] if len(sys.argv) > 1 else "Status Check"
 
-# ── Fetch from SerpAPI Google Flights ─────────────────
-def get_status():
-    url = "https://serpapi.com/search"
-    params = {
-        "engine":  "google_flights",
-        "api_key": SERPAPI_KEY,
-        "q":       "AA293 flight status",
-        "hl":      "en",
-    }
+# ── Helpers ────────────────────────────────────────────
+def fmt(iso_str):
+    if not iso_str or iso_str in ("N/A", "None", None):
+        return "—"
+    try:
+        dt = datetime.fromisoformat(iso_str).replace(tzinfo=None)
+        return dt.strftime("%b %d, %Y  %I:%M %p")
+    except:
+        return "—"
 
-    r = requests.get(url, params=params, timeout=20)
+def calc_delay(scheduled, actual):
+    if not scheduled or not actual:
+        return "—"
+    try:
+        s = datetime.fromisoformat(scheduled).replace(tzinfo=None)
+        a = datetime.fromisoformat(actual).replace(tzinfo=None)
+        diff = int((a - s).total_seconds() / 60)
+        if diff < 0:   return f"{abs(diff)} min early 🟢"
+        elif diff == 0: return "On Time ✅"
+        elif diff <= 15: return f"{diff} min late 🟡"
+        else:           return f"{diff} min late 🔴"
+    except:
+        return "—"
+
+# ── Fetch Flight ───────────────────────────────────────
+def get_status():
+    r = requests.get(
+        "http://api.aviationstack.com/v1/flights",
+        params={
+            "access_key": API_KEY,
+            "flight_iata": FLIGHT,
+            "dep_iata": "DEL",
+            "arr_iata": "JFK"
+        },
+        timeout=15
+    )
     data = r.json()
 
-    print("=== RAW SERPAPI RESPONSE ===")
-    import json
-    print(json.dumps(data, indent=2)[:3000])
-    print("============================")
+    if not data.get("data"):
+        return None, "⚠️ No flight data found. Flight may not be active today."
 
-    # ── Try flight status endpoint instead ────────────
-    url2 = "https://serpapi.com/search"
-    params2 = {
-        "engine":        "google",
-        "api_key":       SERPAPI_KEY,
-        "q":             "AA293 flight status",
-        "hl":            "en",
-        "gl":            "us",
+    f = data["data"][0]
+    raw_status = f.get("flight_status", "unknown")
+    status_map = {
+        "scheduled": "🕐 Scheduled",
+        "active":    "✈️  In Flight",
+        "landed":    "🛬 Landed",
+        "cancelled": "❌ Cancelled",
+        "diverted":  "⚠️  Diverted"
     }
+    status = status_map.get(raw_status, f"❓ {raw_status.title()}")
 
-    r2 = requests.get(url2, params=params2, timeout=20)
-    data2 = r2.json()
+    dep = f["departure"]
+    arr = f["arrival"]
 
-    print("=== RAW SERPAPI GOOGLE RESPONSE ===")
-    print(json.dumps(data2, indent=2)[:5000])
-    print("====================================")
+    dep_sched  = dep.get("scheduled")
+    dep_est    = dep.get("estimated")
+    dep_actual = dep.get("actual")
+    arr_sched  = arr.get("scheduled")
+    arr_est    = arr.get("estimated")
+    arr_actual = arr.get("actual")
+
+    dep_for_delay = dep_actual or dep_est
+    arr_for_delay = arr_actual or arr_est
 
     now_ist = datetime.now(IST).strftime("%b %d, %Y  %I:%M %p")
     now_edt = datetime.now(EDT).strftime("%b %d, %Y  %I:%M %p")
-
-    # ── Parse flight status from knowledge graph ──────
-    kg = data2.get("knowledge_graph", {})
-    answer_box = data2.get("answer_box", {})
-    flights = data2.get("flights", {})
-
-    print("=== KNOWLEDGE GRAPH ===")
-    print(json.dumps(kg, indent=2))
-    print("=== ANSWER BOX ===")
-    print(json.dumps(answer_box, indent=2))
-    print("=== FLIGHTS ===")
-    print(json.dumps(flights, indent=2))
 
     body = f"""
 ✈️  AA293  |  New Delhi  →  New York JFK
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Check     :  {CHECK_LABEL}
-  Status    :  Parsing in progress - check logs
+  Status    :  {status}
+
+
+🛫  DEPARTURE  —  Indira Gandhi Intl (DEL)
+─────────────────────────────────────────
+  Scheduled :  {fmt(dep_sched)}  IST
+  Estimated :  {fmt(dep_est)}    IST
+  Actual    :  {fmt(dep_actual)} IST
+  Delay     :  {calc_delay(dep_sched, dep_for_delay)}
+  Terminal  :  {dep.get("terminal", "3")}   Gate: {dep.get("gate", "—")}
+
+
+🛬  ARRIVAL  —  John F. Kennedy Intl (JFK)
+─────────────────────────────────────────
+  Scheduled :  {fmt(arr_sched)}  EDT
+  Estimated :  {fmt(arr_est)}    EDT
+  Actual    :  {fmt(arr_actual)} EDT
+  Delay     :  {calc_delay(arr_sched, arr_for_delay)}
+  Terminal  :  {arr.get("terminal", "8")}   Gate: {arr.get("gate", "—")}
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Checked at:  {now_ist}  IST
                {now_edt}  EDT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
-    return body
+    return raw_status, body
 
 
 # ── Send Email ─────────────────────────────────────────
@@ -91,7 +128,16 @@ def send_email(subject, body):
 
 
 # ── Main ───────────────────────────────────────────────
-body = get_status()
+raw_status, body = get_status()
 print(body)
-subject = f"✈️ AA293 DEL→JFK  |  {CHECK_LABEL}  |  {datetime.now(IST).strftime('%b %d, %Y')}"
+
+status_emoji = {
+    "scheduled": "🕐",
+    "active":    "✈️",
+    "landed":    "🛬",
+    "cancelled": "❌",
+    "diverted":  "⚠️"
+}.get(raw_status, "✈️")
+
+subject = f"{status_emoji} AA293 DEL→JFK  |  {CHECK_LABEL}  |  {datetime.now(IST).strftime('%b %d, %Y')}"
 send_email(subject, body)
