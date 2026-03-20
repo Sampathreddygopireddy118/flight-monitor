@@ -27,10 +27,10 @@ jobs:
         id: label
         run: |
           HOUR=$(date -u +"%H")
-          if   [ "$HOUR" = "16" ]; then echo "label=🕐 10 PM IST — Pre-Departure"    >> $GITHUB_OUTPUT
-          elif [ "$HOUR" = "19" ]; then echo "label=🛫 Post-Departure Check"          >> $GITHUB_OUTPUT
-          elif [ "$HOUR" = "11" ]; then echo "label=✈️  6 AM EST — In-Flight Status"  >> $GITHUB_OUTPUT
-          else                          echo "label=🛬 7:10 AM EST — Arrival Check"   >> $GITHUB_OUTPUT
+          if   [ "$HOUR" = "16" ]; then echo "label=🕐 10 PM IST — Pre-Departure"   >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "19" ]; then echo "label=🛫 Post-Departure Check"         >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "11" ]; then echo "label=✈️  6 AM EST — In-Flight Status" >> $GITHUB_OUTPUT
+          else                          echo "label=🛬 7:10 AM EST — Arrival Check"  >> $GITHUB_OUTPUT
           fi
 
       - name: Check flight & send email

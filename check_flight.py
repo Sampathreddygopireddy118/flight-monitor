@@ -3,7 +3,6 @@ from email.mime.text import MIMEText
 from datetime import datetime, timezone, timedelta
 
 # ── Timezones ──────────────────────────────────────────
-IST = timezone(timedelta(hours=5, minutes=30))
 EST = timezone(timedelta(hours=-5))
 
 # ── Config ─────────────────────────────────────────────
@@ -14,18 +13,22 @@ GMAIL_PASS  = os.environ["GMAIL_PASS"]
 CHECK_LABEL = sys.argv[1] if len(sys.argv) > 1 else "Status Check"
 
 # ── Helpers ────────────────────────────────────────────
-def fmt(iso_str, tz):
+def fmt(iso_str, tz=None, raw=False):
+    """Format ISO timestamp. raw=True shows time as-is (for DEL local times stored as UTC)"""
     if not iso_str or iso_str in ("N/A", "Not departed yet", "Not arrived yet"):
         return "—"
     try:
-        # Parse with original timezone info, then convert
         dt = datetime.fromisoformat(iso_str)
+        if raw:
+            # API stores DEL local time labeled as UTC — display as-is
+            return dt.strftime("%b %d, %Y  %I:%M %p")
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
         dt = dt.astimezone(tz)
         return dt.strftime("%b %d, %Y  %I:%M %p")
-    except Exception as e:
+    except:
         return iso_str
+
 def delay_str(minutes):
     if not minutes or minutes == 0:
         return "On Time ✅"
@@ -49,9 +52,6 @@ def get_status():
         return None, "⚠️ Could not fetch flight data. API may be down or flight not active today."
 
     f          = data["data"][0]
-    print("RAW DEP SCHEDULED:", f["departure"].get("scheduled"))
-    print("RAW DEP ACTUAL:", f["departure"].get("actual"))
-    print("RAW ARR SCHEDULED:", f["arrival"].get("scheduled"))
     raw_status = f.get("flight_status", "unknown")
     status_map = {
         "scheduled": "🕐 Scheduled",
@@ -75,9 +75,9 @@ def get_status():
 
 🛫  DEPARTURE  —  Indira Gandhi Intl (DEL)
 ─────────────────────────────────────────
-  Scheduled :  {fmt(dep.get("scheduled"), IST)}  IST
-  Estimated :  {fmt(dep.get("estimated"), IST)}  IST
-  Actual    :  {fmt(dep.get("actual"),    IST)}  IST
+  Scheduled :  {fmt(dep.get("scheduled"), raw=True)}  IST
+  Estimated :  {fmt(dep.get("estimated"), raw=True)}  IST
+  Actual    :  {fmt(dep.get("actual"),    raw=True)}  IST
   Delay     :  {delay_str(dep.get("delay", 0))}
   Terminal  :  {dep.get("terminal", "3")}   Gate: {dep.get("gate", "—")}
 
@@ -115,8 +115,11 @@ raw_status, body = get_status()
 print(body)
 
 status_emoji = {
-    "scheduled": "🕐", "active": "✈️",
-    "landed": "🛬", "cancelled": "❌", "diverted": "⚠️"
+    "scheduled": "🕐",
+    "active":    "✈️",
+    "landed":    "🛬",
+    "cancelled": "❌",
+    "diverted":  "⚠️"
 }.get(raw_status, "✈️")
 
 subject = f"{status_emoji} AA293 DEL→JFK  |  {CHECK_LABEL}  |  {datetime.now(EST).strftime('%b %d, %Y')}"
