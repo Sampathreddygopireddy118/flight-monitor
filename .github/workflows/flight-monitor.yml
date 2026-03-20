@@ -21,7 +21,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests
+        run: pip install requests beautifulsoup4
 
       - name: Determine check label
         id: label
@@ -35,7 +35,6 @@ jobs:
 
       - name: Check flight & send email
         env:
-          AVIATIONSTACK_KEY: ${{ secrets.AVIATIONSTACK_KEY }}
-          GMAIL_USER:        ${{ secrets.GMAIL_USER }}
-          GMAIL_PASS:        ${{ secrets.GMAIL_PASS }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
         run: python check_flight.py "${{ steps.label.outputs.label }}"
