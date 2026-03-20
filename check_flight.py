@@ -14,7 +14,7 @@ GMAIL_PASS  = os.environ["GMAIL_PASS"]
 CHECK_LABEL = sys.argv[1] if len(sys.argv) > 1 else "Status Check"
 
 # ── Helpers ────────────────────────────────────────────
-def fmt(iso_str, tz):
+def fmt(iso_str, tz=None):
     """
     AviationStack returns times as local time but labeled +00:00 (UTC).
     Example: 23:55+00:00 is actually 23:55 IST local, NOT 23:55 UTC.
