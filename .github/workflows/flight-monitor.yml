@@ -3,10 +3,10 @@ name: AA293 Flight Monitor
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 16 * * *'   # 10:00 PM IST  — Pre-departure
-    - cron: '30 19 * * *'   #  1:00 AM IST  — Post-departure
-    - cron: '0 11  * * *'   #  6:00 AM EST  — In-flight
-    - cron: '10 12 * * *'   #  7:10 AM EST  — Arrival
+    - cron: '30 4  * * *'   # 10:00 AM IST (4:30 UTC)  — Morning check
+    - cron: '30 18 * * *'   # 12:00 AM IST (18:30 UTC) — Midnight check
+    - cron: '0 11  * * *'   #  6:00 AM EST (11:00 UTC) — In-flight check
+    - cron: '0 12  * * *'   #  7:00 AM EST (12:00 UTC) — Arrival check
 
 jobs:
   check-flight:
@@ -27,10 +27,10 @@ jobs:
         id: label
         run: |
           HOUR=$(date -u +"%H")
-          if   [ "$HOUR" = "16" ]; then echo "label=🕐 10 PM IST — Pre-Departure"   >> $GITHUB_OUTPUT
-          elif [ "$HOUR" = "19" ]; then echo "label=🛫 Post-Departure Check"         >> $GITHUB_OUTPUT
-          elif [ "$HOUR" = "11" ]; then echo "label=✈️  6 AM EST — In-Flight Status" >> $GITHUB_OUTPUT
-          else                          echo "label=🛬 7:10 AM EST — Arrival Check"  >> $GITHUB_OUTPUT
+          if   [ "$HOUR" = "04" ]; then echo "label=🌅 10 AM IST — Morning Check"    >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "18" ]; then echo "label=🌙 12 AM IST — Midnight Check"   >> $GITHUB_OUTPUT
+          elif [ "$HOUR" = "11" ]; then echo "label=✈️  6 AM EST — In-Flight Check"  >> $GITHUB_OUTPUT
+          else                          echo "label=🛬 7 AM EST — Arrival Check"     >> $GITHUB_OUTPUT
           fi
 
       - name: Check flight & send email
