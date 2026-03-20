@@ -49,6 +49,9 @@ def get_status():
         return None, "⚠️ Could not fetch flight data. API may be down or flight not active today."
 
     f          = data["data"][0]
+    print("RAW DEP SCHEDULED:", f["departure"].get("scheduled"))
+    print("RAW DEP ACTUAL:", f["departure"].get("actual"))
+    print("RAW ARR SCHEDULED:", f["arrival"].get("scheduled"))
     raw_status = f.get("flight_status", "unknown")
     status_map = {
         "scheduled": "🕐 Scheduled",
