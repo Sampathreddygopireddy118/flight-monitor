@@ -14,7 +14,7 @@ GMAIL_PASS  = os.environ["GMAIL_PASS"]
 CHECK_LABEL = sys.argv[1] if len(sys.argv) > 1 else "Status Check"
 
 # ── Helpers ────────────────────────────────────────────
-def fmt(iso_str, tz=None):
+def fmt(iso_str):
     """
     AviationStack returns local times labeled as UTC.
     We strip timezone and display as-is with correct label.
@@ -27,10 +27,24 @@ def fmt(iso_str, tz=None):
     except:
         return str(iso_str)
 
-def delay_str(minutes):
-    if not minutes or int(minutes) == 0:
-        return "On Time ✅"
-    return f"{int(minutes)} min late ⚠️"
+def calc_delay(scheduled, estimated_or_actual):
+    """Calculate delay ourselves - never trust API delay field"""
+    if not scheduled or not estimated_or_actual:
+        return "—"
+    try:
+        sched  = datetime.fromisoformat(scheduled).replace(tzinfo=None)
+        actual = datetime.fromisoformat(estimated_or_actual).replace(tzinfo=None)
+        diff   = int((actual - sched).total_seconds() / 60)
+        if diff < 0:
+            return f"{abs(diff)} min early 🟢"
+        elif diff == 0:
+            return "On Time ✅"
+        elif diff <= 15:
+            return f"{diff} min late 🟡"
+        else:
+            return f"{diff} min late 🔴"
+    except:
+        return "—"
 
 # ── Fetch Flight ───────────────────────────────────────
 def get_status():
@@ -63,6 +77,10 @@ def get_status():
     dep = f["departure"]
     arr = f["arrival"]
 
+    # Use actual if available, otherwise estimated for delay calc
+    dep_for_delay = dep.get("actual") or dep.get("estimated")
+    arr_for_delay = arr.get("actual") or arr.get("estimated")
+
     now_ist = datetime.now(IST).strftime("%b %d, %Y  %I:%M %p")
     now_edt = datetime.now(EDT).strftime("%b %d, %Y  %I:%M %p")
 
@@ -79,7 +97,7 @@ def get_status():
   Scheduled :  {fmt(dep.get("scheduled"))}  IST
   Estimated :  {fmt(dep.get("estimated"))}  IST
   Actual    :  {fmt(dep.get("actual"))}     IST
-  Delay     :  {delay_str(dep.get("delay", 0))}
+  Delay     :  {calc_delay(dep.get("scheduled"), dep_for_delay)}
   Terminal  :  {dep.get("terminal", "3")}   Gate: {dep.get("gate", "—")}
 
 
@@ -88,7 +106,7 @@ def get_status():
   Scheduled :  {fmt(arr.get("scheduled"))}  EDT
   Estimated :  {fmt(arr.get("estimated"))}  EDT
   Actual    :  {fmt(arr.get("actual"))}     EDT
-  Delay     :  {delay_str(arr.get("delay", 0))}
+  Delay     :  {calc_delay(arr.get("scheduled"), arr_for_delay)}
   Terminal  :  {arr.get("terminal", "8")}   Gate: {arr.get("gate", "—")}
 
 
